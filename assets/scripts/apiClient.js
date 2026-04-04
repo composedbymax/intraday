@@ -40,4 +40,6 @@ export class ApiClient {
   manualPost(d)      {return this._post('manual_post',d)}
   async getApiKey()  {return idbGet('cycles_api_key')}
   async setApiKey(k) {return idbSet('cycles_api_key',k)}
+  async getChartTz() {return idbGet('chart_timezone')||'UTC'}
+  async setChartTz(tz){return idbSet('chart_timezone',tz)}
 }

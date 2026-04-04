@@ -30,7 +30,7 @@ function doUserConfig() {
   if($user) {
     $s=$pdo->prepare("SELECT symbol,`interval`,auto_update_enabled,last_updated FROM tracked_assets WHERE user=?");
     $s->execute([$user]);$tracked=$s->fetchAll();
-    $s=$pdo->prepare("SELECT id,stream_id,symbol,`interval`,field,enabled FROM cycle_streams WHERE user=?");
+    $s=$pdo->prepare("SELECT id,stream_id,symbol,`interval`,field,enabled,stream_timezone FROM cycle_streams WHERE user=?");
     $s->execute([$user]);$streams=$s->fetchAll();
   }
   $lc=(int)getSetting($pdo,'last_cron_symbol_store',0);
@@ -57,19 +57,15 @@ function doChartData() {
   ok(['candles'=>$data,'symbol'=>$sym,'interval'=>$int,'p1'=>$p1,'p2'=>$p2]);
 }
 function doSearch() {
-  $q = trim($_GET['q'] ?? '');
+  $q=trim($_GET['q']??'');
   if(!$q) err('No query');
-  $url = YAHOO_BASE."/v1/finance/search?".http_build_query([
-    'q' => $q,
-    'quotesCount' => 10,
-    'newsCount' => 0
-  ]);
-  $raw = yahooGet($url);
+  $url=YAHOO_BASE."/v1/finance/search?".http_build_query(['q'=>$q,'quotesCount'=>10,'newsCount'=>0]);
+  $raw=yahooGet($url);
   if(!$raw) err('Search request failed');
-  $d = json_decode($raw, true);
+  $d=json_decode($raw,true);
   if(!$d) err('Invalid Yahoo response');
-  $quotes = $d['quotes'] ?? $d['finance']['result'][0]['quotes'] ?? [];
-  ok(['results' => $quotes]);
+  $quotes=$d['quotes']??$d['finance']['result'][0]['quotes']??[];
+  ok(['results'=>$quotes]);
 }
 function doSetTrack() {
   global $pdo,$user,$role;
@@ -106,6 +102,7 @@ function doAddStream() {
   $sid=trim($_POST['stream_id']??'');
   $apiKey=trim($_POST['api_key']??'');
   $field=in_array($_POST['field']??'',['open','high','low','close'])?$_POST['field']:'close';
+  $streamTz=trim($_POST['stream_timezone']??'UTC')?:'UTC';
   if(!$sym||!$int||!$sid||!$apiKey) err('Missing params');
   $s=$pdo->prepare("SELECT auto_update_enabled FROM tracked_assets WHERE user=? AND symbol=? AND `interval`=?");
   $s->execute([$user,$sym,$int]);$tr=$s->fetch();
@@ -114,14 +111,14 @@ function doAddStream() {
   $s->execute([$user]);
   if((int)$s->fetchColumn()>=lim($role)) err('Stream limit reached');
   $enc=encryptKey($apiKey);
-  $pdo->prepare("INSERT INTO cycle_streams(user,encrypted_api_key,stream_id,symbol,`interval`,field,enabled)VALUES(?,?,?,?,?,?,1)")
-    ->execute([$user,$enc,$sid,$sym,$int,$field]);
+  $pdo->prepare("INSERT INTO cycle_streams(user,encrypted_api_key,stream_id,symbol,`interval`,field,enabled,stream_timezone)VALUES(?,?,?,?,?,?,1,?)")
+    ->execute([$user,$enc,$sid,$sym,$int,$field,$streamTz]);
   $id=(int)$pdo->lastInsertId();
   $p1=time()-(DEFAULT_DAYS[$int]??60)*86400;
   $candles=getCachedCandles($pdo,$sym,$int,$p1,time());
   $initialSent=0;
   if($candles) {
-    $dates=array_map(fn($c)=>gmdate('c',$c['time']),$candles);
+    $dates=array_map(fn($c)=>formatInTimezone($c['time'],$streamTz),$candles);
     $values=array_map(fn($c)=>(float)$c[$field],$candles);
     pushToCycles($apiKey,$sid,$dates,$values);
     $lastTs=$candles[count($candles)-1]['time'];

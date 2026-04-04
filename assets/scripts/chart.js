@@ -1,4 +1,5 @@
 import {toast} from './message.js';
+import {offsetMinutesForZone,shiftTimestamp} from './timezone.js';
 const INTERVALS_S={
   '1m':60,'2m':120,'5m':300,'15m':900,'30m':1800,
   '1h':3600,'4h':14400,'1d':86400,'1wk':604800,'1mo':2592000,'3mo':7776000
@@ -12,14 +13,28 @@ const CHART_OPTS={
   handleScroll:true,handleScale:true
 };
 export class Chart {
-  constructor(container,api) {
+  constructor(container,api,timezone='UTC') {
     this.container=container;this.api=api;
     this.sym=null;this.int='1d';
     this.mode='candle';this.field='close';this.volMode='overlay';
     this._data=[];this._p1=0;this._p2=0;
     this._chart=null;this._main=null;this._vol=null;
     this._listeners=[];
+    this._timezone=timezone;
+    this._tzOffsetMin=0;
     this._init();
+  }
+  _tzOffset(iana){
+    if(iana==='UTC') return 0;
+    try{return offsetMinutesForZone(iana)}catch(e){return 0}
+  }
+  setTimezone(tz){
+    this._timezone=tz;
+    this._tzOffsetMin=this._tzOffset(tz);
+    if(this._data.length) this._apply();
+  }
+  _shiftTime(unixSec){
+    return shiftTimestamp(unixSec,this._tzOffsetMin);
   }
   _init() {
     this._chart=LightweightCharts.createChart(this.container,{...CHART_OPTS,width:this.container.clientWidth,height:this.container.clientHeight});
@@ -56,16 +71,17 @@ export class Chart {
   _apply() {
     if(!this._data.length) return;
     if(this.mode==='candle') {
-      this._main.setData(this._data.map(c=>({time:c.time,open:c.open,high:c.high,low:c.low,close:c.close})));
+      this._main.setData(this._data.map(c=>({time:this._shiftTime(c.time),open:c.open,high:c.high,low:c.low,close:c.close})));
     } else {
-      this._main.setData(this._data.map(c=>({time:c.time,value:c[this.field]})));
+      this._main.setData(this._data.map(c=>({time:this._shiftTime(c.time),value:c[this.field]})));
     }
     if(this._vol) {
-      this._vol.setData(this._data.map(c=>({time:c.time,value:c.volume,color:c.close>=c.open?'rgba(34,197,94,0.35)':'rgba(239,68,68,0.35)'})));
+      this._vol.setData(this._data.map(c=>({time:this._shiftTime(c.time),value:c.volume,color:c.close>=c.open?'rgba(34,197,94,0.35)':'rgba(239,68,68,0.35)'})));
     }
   }
   async load(sym,int,p1,p2) {
     this.sym=sym;this.int=int||this.int;
+    this._tzOffsetMin=this._tzOffset(this._timezone);
     const res=await this.api.chartData(sym,this.int,p1,p2);
     if(res.error){toast(res.error,'error');return}
     this._data=res.candles||[];

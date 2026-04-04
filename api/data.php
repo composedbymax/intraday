@@ -29,7 +29,8 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS cycle_streams(
   user VARCHAR(100) NOT NULL,encrypted_api_key TEXT,stream_id VARCHAR(100) NOT NULL,
   symbol VARCHAR(20) NOT NULL,`interval` VARCHAR(5) NOT NULL,
   field VARCHAR(10) NOT NULL DEFAULT 'close',enabled TINYINT(1) NOT NULL DEFAULT 1,
-  last_sent_timestamp INT UNSIGNED NULL
+  last_sent_timestamp INT UNSIGNED NULL,
+  stream_timezone VARCHAR(60) NOT NULL DEFAULT 'UTC'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4");
 $pdo->exec("CREATE TABLE IF NOT EXISTS settings(
   `key` VARCHAR(50) PRIMARY KEY,`value` TEXT
@@ -84,6 +85,16 @@ function encryptKey($plain) {
 function decryptKey($stored) {
   [$iv,$data]=array_pad(explode('|',$stored,2),2,'');
   return openssl_decrypt($data,'AES-256-CBC',CRYPT_KEY,0,$iv);
+}
+function formatInTimezone($unixSec,$iana) {
+  if(!$iana||$iana==='UTC') return gmdate('c',$unixSec);
+  try {
+    $dt=new DateTime('@'.$unixSec);
+    $dt->setTimezone(new DateTimeZone($iana));
+    return $dt->format('c');
+  } catch(Exception $e) {
+    return gmdate('c',$unixSec);
+  }
 }
 function pushToCycles($apiKey,$streamId,$dates,$values) {
   $body=json_encode(['streamid'=>$streamId,'messagetype'=>'UPSERT','dates'=>$dates,'values'=>$values]);

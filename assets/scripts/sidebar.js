@@ -1,28 +1,35 @@
 import {toast,confirm,deny} from './message.js';
 const INTERVALS=['1m','2m','5m','15m','30m','1h','4h','1d','1wk','1mo','3mo'];
 export class Sidebar {
-  constructor(container,chart,api,config) {
+  constructor(container,chart,api,config,localTimezone) {
     this.el=container;this.chart=chart;this.api=api;this.config=config;
     this.open=false;this.showSettings=false;
     this._config=config;
+    this._localTz=localTimezone||'UTC';
+    this._chartTz='UTC';
+    this.onTimezoneChange=null;
+    this.api.getChartTz().then(tz=>{
+      if(tz&&tz!==this._chartTz){this._chartTz=tz;this._applyChartTz();}
+    }).catch(()=>{});
     this._render();
     document.addEventListener('symbol-changed',e=>this._onSymbolChange(e.detail));
-    this._handleOutsideClick = this._handleOutsideClick.bind(this);
-    this._handleKeydown = this._handleKeydown.bind(this);
-    document.addEventListener('click', this._handleOutsideClick);
-    document.addEventListener('keydown', this._handleKeydown);
-    this.el.addEventListener('click', e => e.stopPropagation());
+    this._handleOutsideClick=this._handleOutsideClick.bind(this);
+    this._handleKeydown=this._handleKeydown.bind(this);
+    document.addEventListener('click',this._handleOutsideClick);
+    document.addEventListener('keydown',this._handleKeydown);
+    this.el.addEventListener('click',e=>e.stopPropagation());
+  }
+  _applyChartTz(){
+    if(this.onTimezoneChange) this.onTimezoneChange(this._chartTz);
   }
   _handleOutsideClick(e) {
-    if (!this.open) return;
-    const sidebarEl = document.getElementById('sidebar');
-    const toggleBtn = document.getElementById('sb-toggle');
-    const isInside = sidebarEl.contains(e.target);
-    const isToggle = toggleBtn?.contains(e.target);
-    if (!isInside && !isToggle) this.toggle();
+    if(!this.open) return;
+    const sidebarEl=document.getElementById('sidebar');
+    const toggleBtn=document.getElementById('sb-toggle');
+    if(!sidebarEl.contains(e.target)&&!toggleBtn?.contains(e.target)) this.toggle();
   }
   _handleKeydown(e) {
-    if (e.key === 'Escape' && this.open) this.toggle();
+    if(e.key==='Escape'&&this.open) this.toggle();
   }
   toggle() {
     this.open=!this.open;
@@ -131,7 +138,8 @@ export class Sidebar {
     const sd=document.createElement('div');sd.className='stream-row';
     if(stream) {
       const stId=`stream-toggle-${uid}`;
-      sd.innerHTML=`<span class="stream-id">Stream: ${stream.stream_id}</span>
+      const tzLabel=stream.stream_timezone&&stream.stream_timezone!=='UTC'?stream.stream_timezone:'UTC';
+      sd.innerHTML=`<span class="stream-id">Stream: ${stream.stream_id} <span class="stream-tz-badge">${tzLabel}</span></span>
         <label class="switch" for="${stId}"><input type="checkbox" id="${stId}" class="stream-toggle" ${stream.enabled?'checked':''}><span class="slider"></span></label>
         <button class="btn-sm danger rm-stream">×</button>`;
       sd.querySelector('.stream-toggle').onchange=async e=>{
@@ -157,12 +165,21 @@ export class Sidebar {
     const sidId=`${uid}-sid`;
     const keyId=`${uid}-key`;
     const fieldId=`${uid}-field`;
+    const tzId=`${uid}-tz`;
+    const localLabel=this._localTz!=='UTC'?this._localTz:'UTC';
     sd.innerHTML=`<div class="add-stream-form">
       <div class="row">
         <label for="${sidId}" class="sr-only">Stream ID</label>
         <input type="text" id="${sidId}" placeholder="Stream ID">
         <label for="${fieldId}" class="sr-only">Field</label>
         <select id="${fieldId}">${['close','open','high','low'].map(f=>`<option value="${f}">${f}</option>`).join('')}</select>
+      </div>
+      <div class="row">
+        <label for="${tzId}" class="sr-only">Stream Timezone</label>
+        <select id="${tzId}" class="stream-tz-select">
+          <option value="UTC">UTC</option>
+          ${this._localTz!=='UTC'?`<option value="${this._localTz}">${this._localTz}</option>`:''}
+        </select>
       </div>
       <label for="${keyId}" class="sr-only">Cycles API Key</label>
       <input type="password" id="${keyId}" placeholder="Cycles API Key (or use saved)">
@@ -177,11 +194,12 @@ export class Sidebar {
       let key=sd.querySelector(`#${keyId}`).value.trim();
       if(!key) key=await this.api.getApiKey()||'';
       const field=sd.querySelector(`#${fieldId}`).value;
+      const streamTz=sd.querySelector(`#${tzId}`).value;
       if(!sid||!key){deny('Stream ID and API Key required');return}
-      const r=await this.api.addStream({symbol:t.symbol,interval:t.interval,stream_id:sid,api_key:key,field});
+      const r=await this.api.addStream({symbol:t.symbol,interval:t.interval,stream_id:sid,api_key:key,field,stream_timezone:streamTz});
       if(r.error){deny(r.error);return}
       if(key) await this.api.setApiKey(key);
-      this._config.streams.push({id:r.id,stream_id:sid,symbol:t.symbol,interval:t.interval,field,enabled:1});
+      this._config.streams.push({id:r.id,stream_id:sid,symbol:t.symbol,interval:t.interval,field,enabled:1,stream_timezone:streamTz});
       toast('Stream added','success');this._render();
     };
   }
@@ -198,6 +216,13 @@ export class Sidebar {
       wrap.innerHTML+=`<div class="setting-row"><a href="/auth">Sign in</a> to enable auto-updates & streams</div>`;
     }
     wrap.innerHTML+=`<div class="sb-divider"></div>`;
+    const localOpt=this._localTz!=='UTC'?`<option value="${this._localTz}">${this._localTz}</option>`:'';
+    wrap.innerHTML+=`<div class="setting-row"><label>Chart Timezone</label>
+      <select id="chart-tz-select">
+        <option value="UTC"${this._chartTz==='UTC'?' selected':''}>UTC</option>
+        ${localOpt?`<option value="${this._localTz}"${this._chartTz===this._localTz?' selected':''}>${this._localTz}</option>`:''}
+      </select>
+    </div>`;
     wrap.innerHTML+=`<div class="setting-row"><label>Chart Mode</label>
       <div class="toggle-group">
         <button class="toggle-btn${this.chart.mode==='candle'?' active':''}" data-mode="candle">OHLC</button>
@@ -222,6 +247,11 @@ export class Sidebar {
       </div></div>`;
     this.el.appendChild(wrap);
     this.api.getApiKey().then(k=>{if(k) wrap.querySelector('#api-key-in').value=k});
+    wrap.querySelector('#chart-tz-select').onchange=async e=>{
+      this._chartTz=e.target.value;
+      await this.api.setChartTz(this._chartTz);
+      this._applyChartTz();
+    };
     wrap.querySelectorAll('[data-mode]').forEach(b=>{
       b.onclick=()=>{
         wrap.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));

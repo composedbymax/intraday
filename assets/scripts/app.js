@@ -3,6 +3,7 @@ import {ApiClient} from './apiClient.js';
 import {Chart} from './chart.js';
 import {Search} from './search.js';
 import {Sidebar} from './sidebar.js';
+import {localTimezone,offsetMinutesForZone} from './timezone.js';
 document.getElementById('app').innerHTML=`
 <header id="hdr">
   <div class="hdr-l">
@@ -27,8 +28,13 @@ async function main() {
   initMessage();
   const api=new ApiClient(window.CFG.api);
   const config=await api.userConfig().catch(()=>({}));
-  const chart=new Chart(document.getElementById('chart-wrap'),api);
-  const sidebar=new Sidebar(document.getElementById('sb-inner'),chart,api,config);
+  let chartTz='UTC';
+  const chart=new Chart(document.getElementById('chart-wrap'),api,chartTz);
+  const sidebar=new Sidebar(document.getElementById('sb-inner'),chart,api,config,localTimezone);
+  sidebar.onTimezoneChange=tz=>{
+    chartTz=tz;
+    chart.setTimezone(tz);
+  };
   new Search(document.getElementById('search-in'),document.getElementById('search-res'),chart,api);
   document.getElementById('sb-toggle').addEventListener('click',()=>sidebar.toggle());
   chart.on('load',({sym,int})=>{
