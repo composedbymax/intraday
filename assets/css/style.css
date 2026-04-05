@@ -12,13 +12,26 @@
   --fnt:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body,#app{height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--fnt);font-size:14px}
+html,body,#app{scrollbar-gutter:stable;scroll-behavior:smooth;height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--fnt);font-size:14px}
 button{cursor:pointer;font:inherit;border:none;background:none;color:inherit}
 input{font:inherit;color:inherit;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);outline:none}
 input:focus{border-color:var(--accent)}
 select{font:inherit;color:var(--text);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);outline:none;padding:4px 8px}
 a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
+
+*{scrollbar-width:thin;scrollbar-color:var(--accent) var(--bg2);}
+::-webkit-scrollbar{width:10px;height:10px;}
+::-webkit-scrollbar-track{background:var(--bg2);border-radius:var(--radius);}
+::-webkit-scrollbar-thumb{background:var(--accent);border-radius:var(--radius);border:2px solid var(--bg2);}
+::-webkit-scrollbar-thumb:hover{background:var(--accent-h);}
+::-webkit-scrollbar-corner{background:var(--bg2);}
+::selection{background:var(--accent);color:var(--white);}
+::-moz-selection{background:var(--accent);color:var(--white);}
+::placeholder{color:var(--text3);opacity:1;}
+input:focus::placeholder{opacity:.4;}
+:focus-visible{box-shadow:0 0 0 2px var(--accent);}
+body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 
 /* ── Layout ── */
 #app{display:flex;flex-direction:column}
@@ -165,3 +178,25 @@ a:hover{text-decoration:underline}
 .fieldset-reset{border:none;padding:0;margin:0}
 .hidden{display:none!important}
 #tv-attr-logo {display: none !important;}
+
+/* ── Export row ── */
+.export-row{flex-wrap:wrap;gap:4px}
+.export-label{font-size:11px;color:var(--text3);font-weight:600;width:100%}
+.export-timefmt-select{height:28px;font-size:12px;flex:1;}
+
+/* ── Export table overlay ── */
+#export-table-overlay{position:fixed;inset:0;background:var(--shadow);z-index:9500;display:flex;align-items:center;justify-content:center;padding:20px}
+#export-table-wrap{background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);display:flex;flex-direction:column;width:min(960px,100%);max-height:90vh;overflow:hidden}
+#export-table-toolbar{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid var(--border);flex-shrink:0}
+#export-table-title{font-size:13px;font-weight:600;color:var(--text)}
+#export-table-actions{display:flex;gap:8px}
+#export-copy-btn{background:var(--accent);color:var(--white);border-radius:var(--radius);padding:4px 12px;font-size:12px;font-weight:500;transition:background .15s}
+#export-copy-btn:hover{background:var(--accent-h)}
+#export-close-btn{background:var(--bg4);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);padding:4px 10px;font-size:13px;transition:all .15s}
+#export-close-btn:hover{border-color:var(--red);color:var(--red)}
+#export-table-scroll{overflow:auto;flex:1}
+#export-table{width:100%;border-collapse:collapse;font-size:12px}
+#export-table thead{position:sticky;top:0;background:var(--bg3);z-index:1}
+#export-table th{padding:7px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
+#export-table td{padding:6px 12px;color:var(--text);border-bottom:1px solid var(--border)}
+#export-table tbody tr:hover td{background:var(--bg3)}

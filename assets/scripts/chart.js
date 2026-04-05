@@ -85,7 +85,7 @@ export class Chart {
   async load(sym,int,p1,p2) {
     this.sym=sym;this.int=int||this.int;
     this._tzOffsetMin=this._tzOffset(this._timezone);
-    const res=await this.api.chartData(sym,this.int,p1,p2,INITIAL_LIMIT);
+    const res=await this.api.chartData(sym,this.int,p1,p2,INITIAL_LIMIT,true);
     if(res.error){toast(res.error,'error');return}
     this._data=res.candles||[];
     this._p1=res.p1;this._p2=res.p2;

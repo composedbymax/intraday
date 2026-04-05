@@ -1,5 +1,6 @@
 import {toast,confirm,deny} from './message.js';
 import {Chart,INTERVALS} from './chart.js';
+import {Exporter} from './export.js';
 export class Sidebar {
   constructor(container,chart,api,config,localTimezone) {
     this.el=container;this.chart=chart;this.api=api;this.config=config;
@@ -12,6 +13,8 @@ export class Sidebar {
       if(tz&&tz!==this._chartTz){this._chartTz=tz;this._applyChartTz();}
     }).catch(()=>{});
     this._render();
+    this._exporter = new Exporter(chart);
+    this._exporter.timezone = this._chartTz;
     this.chart.on('barsChanged',({count})=>this._updateBarCount(count));
     document.addEventListener('symbol-changed',e=>this._onSymbolChange(e.detail));
     this._handleOutsideClick=this._handleOutsideClick.bind(this);
@@ -21,7 +24,8 @@ export class Sidebar {
     this.el.addEventListener('click',e=>e.stopPropagation());
   }
   _applyChartTz(){
-    if(this.onTimezoneChange) this.onTimezoneChange(this._chartTz);
+    if (this._exporter) this._exporter.timezone = this._chartTz;
+    if (this.onTimezoneChange) this.onTimezoneChange(this._chartTz);
   }
   _handleOutsideClick(e) {
     if(!this.open) return;
@@ -95,9 +99,28 @@ export class Sidebar {
       </div>
       <div class="ctrl-row bar-count-row">
         <span id="sb-bar-count">Bars on chart: ${this.chart.getBarCount().toLocaleString()}</span>
+      </div>
+      <div class="ctrl-row export-row">
+        <span class="export-label">Export</span>
+        <select id="exp-timefmt" class="export-timefmt-select">
+          <option value="unix">Unix</option>
+          <option value="iso">ISO</option>
+          <option value="datetime">Datetime</option>
+        </select>
+      </div>
+      <div class="ctrl-row export-row">
+        <button class="btn-sm" id="exp-csv">CSV</button>
+        <button class="btn-sm" id="exp-json">JSON</button>
+        <button class="btn-sm" id="exp-txt">TXT</button>
+        <button class="btn-sm" id="exp-table">Table</button>
       </div>`;
     wrap.querySelector('#btn-before').onclick=()=>this.chart.extendBefore(+wrap.querySelector('#bars-before').value||200);
     wrap.querySelector('#btn-after').onclick=()=>this.chart.extendAfter(+wrap.querySelector('#bars-after').value||200);
+    wrap.querySelector('#exp-timefmt').onchange=e=>{ this._exporter.timeFmt=e.target.value; };
+    wrap.querySelector('#exp-csv').onclick=()=>this._exporter.exportCSV();
+    wrap.querySelector('#exp-json').onclick=()=>this._exporter.exportJSON();
+    wrap.querySelector('#exp-txt').onclick=()=>this._exporter.exportTXT();
+    wrap.querySelector('#exp-table').onclick=()=>this._exporter.showTable();
     this.el.appendChild(wrap);
     const d=document.createElement('div');d.className='sb-divider';this.el.appendChild(d);
   }
@@ -221,7 +244,10 @@ export class Sidebar {
   _renderSettings() {
     const wrap = document.createElement('div');
     wrap.className = 'settings-panel';
-    const localOpt = this._localTz !== 'UTC' ? `<option value="${this._localTz}">${this._localTz}</option>` : '';
+    const localOpt =
+      this._localTz !== 'UTC'
+        ? `<option value="${this._localTz}"${this._chartTz === this._localTz ? ' selected' : ''}>${this._localTz}</option>`
+        : '';
     const createToggleBtns = (items, active, attr) =>
       items.map(i => `<button class="toggle-btn${i===active?' active':''}" ${attr}="${i}">${i}</button>`).join('');
     wrap.innerHTML = `

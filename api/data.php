@@ -1,15 +1,20 @@
 <?php
-$host='localhost';$dbname='intraday';$dbuser='root';$dbpass='root';
-define('CRYPT_KEY','hwihfiwhfihZdih29h9qhd29hnd0jhsh');
+$config = require __DIR__ . '/config.php';
+$host   = $config['host'];
+$dbname = $config['dbname'];
+$dbuser = $config['dbuser'];
+$dbpass = $config['dbpass'];
+define('CRYPT_KEY', $config['crypt_key']);
 define('YAHOO_BASE','https://query2.finance.yahoo.com');
 define('CYCLES_BASE','https://api.cycle.tools/api/Stream/SubmitStreamData');
 define('ALLOWED_INTERVALS',['1m','2m','5m','15m','30m','1h','4h','1d','1wk','1mo','3mo']);
 define('DEFAULT_DAYS',['1m'=>8,'2m'=>60,'5m'=>60,'15m'=>60,'30m'=>60,'1h'=>730,'4h'=>730,'1d'=>1825,'1wk'=>3650,'1mo'=>3650,'3mo'=>3650]);
 try {
-  $pdo=new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4",$dbuser,$dbpass,[
-    PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,
-    PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC
-  ]);
+  $pdo = new PDO("mysql:host=$host;dbname=$dbname;charset=utf8mb4",$dbuser,$dbpass,[
+      PDO::ATTR_ERRMODE=>PDO::ERRMODE_EXCEPTION,
+      PDO::ATTR_DEFAULT_FETCH_MODE=>PDO::FETCH_ASSOC
+    ]
+  );
 } catch(PDOException $e) {
   http_response_code(500);die(json_encode(['error'=>'DB: '.$e->getMessage()]));
 }
