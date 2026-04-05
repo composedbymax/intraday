@@ -16,12 +16,18 @@ export class Sidebar {
     this._exporter = new Exporter(chart);
     this._exporter.timezone = this._chartTz;
     this.chart.on('barsChanged',({count})=>this._updateBarCount(count));
+    this.chart.on('load',({int})=>this._updateActiveTf(int));
     document.addEventListener('symbol-changed',e=>this._onSymbolChange(e.detail));
     this._handleOutsideClick=this._handleOutsideClick.bind(this);
     this._handleKeydown=this._handleKeydown.bind(this);
     document.addEventListener('click',this._handleOutsideClick);
     document.addEventListener('keydown',this._handleKeydown);
     this.el.addEventListener('click',e=>e.stopPropagation());
+  }
+  _updateActiveTf(int) {
+    this.el.querySelectorAll('.tf-btn').forEach(b => {
+      b.classList.toggle('active', b.dataset.int === int);
+    });
   }
   _applyChartTz(){
     if (this._exporter) this._exporter.timezone = this._chartTz;
@@ -220,11 +226,13 @@ export class Sidebar {
         </select>
       </div>
       <label for="${keyId}" class="sr-only">Cycles API Key</label>
-      <input type="password" id="${keyId}" placeholder="Cycles API Key (or use saved)">
-      <div class="row row-end">
-        <button class="btn-sm" id="asf-cancel">Cancel</button>
-        <button class="btn-primary" id="asf-save">Save</button>
-      </div>
+      <form id="manual-post-form" onsubmit="return false;">
+        <input type="password" id="${keyId}" autocomplete="off" placeholder="Cycles API Key (or use saved)">
+        <div class="row row-end">
+          <button class="btn-sm" id="asf-cancel">Cancel</button>
+          <button class="btn-primary" id="asf-save">Save</button>
+        </div>
+      </form>
     </div>`;
     sd.querySelector('#asf-cancel').onclick=()=>this._render();
     sd.querySelector('#asf-save').onclick=async()=>{

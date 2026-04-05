@@ -8,8 +8,13 @@ export class Exporter {
     return this._chart.getCurrentData();
   }
   _cols() {
-    if (this._chart.mode === 'line') return ['time', this._chart.field];
-    return ['time', 'open', 'high', 'low', 'close', 'volume'];
+    const includeVol = this._chart.volMode === 'overlay' || this._chart.volMode === 'pane';
+    if (this._chart.mode === 'line') {
+      return includeVol ? ['time', this._chart.field, 'volume'] : ['time', this._chart.field];
+    }
+    return includeVol
+      ? ['time', 'open', 'high', 'low', 'close', 'volume']
+      : ['time', 'open', 'high', 'low', 'close'];
   }
   _formatTime(unix) {
     if (this.timeFmt === 'iso') {
