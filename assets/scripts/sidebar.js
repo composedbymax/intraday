@@ -41,13 +41,20 @@ export class Sidebar {
     this.showSettings?this._renderSettings():this._renderMain();
   }
   _renderTop() {
-    const div=document.createElement('div');
-    div.className='sb-section sb-top-row';
-    div.innerHTML=`<span class="sb-menu-title">Menu</span>
-      <button class="icon-btn" id="sb-settings-toggle" title="Settings">⚙</button>`;
-    div.querySelector('#sb-settings-toggle').onclick=()=>{this.showSettings=!this.showSettings;this._render()};
-    this.el.appendChild(div);
-    const div2=document.createElement('div');div2.className='sb-divider';this.el.appendChild(div2);
+    this.el.append(
+      Object.assign(document.createElement('div'), {
+        className: 'sb-section sb-top-row',
+        innerHTML: `<span class="sb-menu-title">${this.showSettings ? 'Settings' : 'Menu'}</span>
+                    <button class="icon-btn" id="sb-settings-toggle" title="${this.showSettings ? 'Back' : 'Settings'}">
+                      ${this.showSettings ? '←' : '⚙'}
+                    </button>`
+      }),
+      Object.assign(document.createElement('div'), { className: 'sb-divider' })
+    );
+    this.el.querySelector('#sb-settings-toggle').onclick = () => {
+      this.showSettings = !this.showSettings;
+      this._render();
+    };
   }
   _renderMain() {
     this._renderTimeframes();
@@ -204,100 +211,117 @@ export class Sidebar {
     };
   }
   _renderSettings() {
-    const lbl=document.createElement('div');lbl.className='sb-label';lbl.textContent='Settings';
-    this.el.appendChild(lbl);
-    const wrap=document.createElement('div');wrap.className='settings-panel';
-    if(window.userLoggedIn) {
-      wrap.innerHTML+=`<div class="user-info">
-        <span class="name">${window.userName||'User'}</span>
-        <span class="role-badge">${window.userRole||'basic'}</span>
-      </div>`;
-    } else {
-      wrap.innerHTML+=`<div class="setting-row"><a href="/auth">Sign in</a> to enable auto-updates & streams</div>`;
-    }
-    wrap.innerHTML+=`<div class="sb-divider"></div>`;
-    const localOpt=this._localTz!=='UTC'?`<option value="${this._localTz}">${this._localTz}</option>`:'';
-    wrap.innerHTML+=`<div class="setting-row"><label>Chart Timezone</label>
-      <select id="chart-tz-select">
-        <option value="UTC"${this._chartTz==='UTC'?' selected':''}>UTC</option>
-        ${localOpt?`<option value="${this._localTz}"${this._chartTz===this._localTz?' selected':''}>${this._localTz}</option>`:''}
-      </select>
-    </div>`;
-    wrap.innerHTML+=`<div class="setting-row"><label>Chart Mode</label>
-      <div class="toggle-group">
-        <button class="toggle-btn${this.chart.mode==='candle'?' active':''}" data-mode="candle">OHLC</button>
-        <button class="toggle-btn${this.chart.mode==='line'?' active':''}" data-mode="line">Line</button>
-      </div></div>`;
-    wrap.innerHTML+=`<div class="setting-row"><label>Value Field</label>
-      <div class="toggle-group" id="field-group">${['open','high','low','close'].map(f=>`<button class="toggle-btn${this.chart.field===f?' active':''}" data-field="${f}">${f}</button>`).join('')}</div></div>`;
-    wrap.innerHTML+=`<div class="setting-row"><label>Volume</label>
-      <div class="toggle-group" id="vol-group">${['off','overlay','pane'].map(v=>`<button class="toggle-btn${this.chart.volMode===v?' active':''}" data-vol="${v}">${v}</button>`).join('')}</div></div>`;
-    wrap.innerHTML+=`<div class="setting-row">
-      <label for="api-key-in">Cycles API Key</label>
-      <input type="password" id="api-key-in" placeholder="Paste key to save…"></div>`;
-    wrap.innerHTML+=`<div class="setting-row"><label>Manual Post to Cycles</label>
-      <div class="manual-post-wrap">
-        <div class="row">
-          <label for="mp-sid" class="sr-only">Stream ID</label>
-          <input type="text" id="mp-sid" placeholder="Stream ID">
-          <label for="mp-field" class="sr-only">Field</label>
-          <select id="mp-field">${['close','open','high','low'].map(f=>`<option value="${f}">${f}</option>`).join('')}</select>
+    const wrap = document.createElement('div');
+    wrap.className = 'settings-panel';
+    const localOpt = this._localTz !== 'UTC' ? `<option value="${this._localTz}">${this._localTz}</option>` : '';
+    const createToggleBtns = (items, active, attr) =>
+      items.map(i => `<button class="toggle-btn${i===active?' active':''}" ${attr}="${i}">${i}</button>`).join('');
+    wrap.innerHTML = `
+      ${window.userLoggedIn
+        ? `<div class="user-info"><span class="name">${window.userName||'User'}</span><span class="role-badge">${window.userRole||'basic'}</span></div>`
+        : `<div class="setting-row"><a href="/auth?redirect=/chart/">Sign in</a> to enable auto-updates & streams</div>`}
+      <div class="sb-divider"></div>
+      <div class="setting-box">
+        <div class="setting-row">
+          <label for="chart-tz-select">Chart Timezone</label>
+          <select id="chart-tz-select"><option value="UTC"${this._chartTz==='UTC'?' selected':''}>UTC</option>${localOpt}</select>
         </div>
-        <button class="btn-primary btn-mt" id="mp-btn">Post Current Chart Data</button>
-      </div></div>`;
+        <div class="setting-row chart-mode-row">
+          <fieldset class="fieldset-reset">
+            <legend class="setting-row-legend">Chart Mode</legend>
+            <div class="toggle-group">${createToggleBtns(['candle','line'], this.chart.mode, 'data-mode')}</div>
+          </fieldset>
+        </div>
+        <div class="setting-row value-field-row${this.chart.mode === 'candle' ? ' hidden' : ''}">
+          <fieldset class="fieldset-reset">
+            <legend class="setting-row-legend">Value Field</legend>
+            <div class="toggle-group">${createToggleBtns(['open','high','low','close'], this.chart.field, 'data-field')}</div>
+          </fieldset>
+        </div>
+        <div class="setting-row">
+          <fieldset class="fieldset-reset">
+            <legend class="setting-row-legend">Volume</legend>
+            <div class="toggle-group">${createToggleBtns(['off','overlay','pane'], this.chart.volMode, 'data-vol')}</div>
+          </fieldset>
+        </div>
+        <form id="manual-post-form" onsubmit="return false;">
+          <div class="setting-row">
+            <label for="api-key-in">Cycles API Key</label>
+            <input type="password" id="api-key-in" placeholder="Paste key to save…" autocomplete="off">
+          </div>
+          <div class="setting-row">
+            <label for="mp-sid">Manual Post to Cycles</label>
+            <div class="manual-post-wrap">
+              <div class="row">
+                <input type="text" id="mp-sid" placeholder="Stream ID">
+                <label for="mp-field" class="sr-only">Field</label>
+                <select id="mp-field">${['close','open','high','low'].map(f=>`<option value="${f}">${f}</option>`).join('')}</select>
+              </div>
+              <button class="btn-primary btn-mt" id="mp-btn">Post Current Chart Data</button>
+            </div>
+          </div>
+        </form>
+      </div>
+    `;
     this.el.appendChild(wrap);
-    this.api.getApiKey().then(k=>{if(k) wrap.querySelector('#api-key-in').value=k});
-    wrap.querySelector('#chart-tz-select').onchange=async e=>{
-      this._chartTz=e.target.value;
+    const valueFieldRow = wrap.querySelector('.value-field-row');
+    const _bindToggleGroup = (selector, callback) => {
+      wrap.querySelectorAll(selector).forEach(btn => {
+        btn.onclick = () => {
+          wrap.querySelectorAll(selector).forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          callback(btn);
+        };
+      });
+    };
+    wrap.querySelector('#chart-tz-select').onchange = async e => {
+      this._chartTz = e.target.value;
       await this.api.setChartTz(this._chartTz);
       this._applyChartTz();
     };
-    wrap.querySelectorAll('[data-mode]').forEach(b=>{
-      b.onclick=()=>{
-        wrap.querySelectorAll('[data-mode]').forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');this.chart.setMode(b.dataset.mode);
-      };
+    _bindToggleGroup('[data-mode]', btn => {
+      this.chart.setMode(btn.dataset.mode);
+      valueFieldRow.classList.toggle('hidden', btn.dataset.mode === 'candle');
     });
-    wrap.querySelectorAll('[data-field]').forEach(b=>{
-      b.onclick=()=>{
-        wrap.querySelectorAll('[data-field]').forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');this.chart.setField(b.dataset.field);
-      };
-    });
-    wrap.querySelectorAll('[data-vol]').forEach(b=>{
-      b.onclick=()=>{
-        wrap.querySelectorAll('[data-vol]').forEach(x=>x.classList.remove('active'));
-        b.classList.add('active');this.chart.setVolMode(b.dataset.vol);
-      };
-    });
-    const keyIn=wrap.querySelector('#api-key-in');
-    keyIn.addEventListener('change',async()=>{if(keyIn.value.trim()){await this.api.setApiKey(keyIn.value.trim());toast('API key saved','success')}});
-    wrap.querySelector('#mp-btn').onclick=async()=>{
-      const sid=wrap.querySelector('#mp-sid').value.trim();
-      let key=keyIn.value.trim()||await this.api.getApiKey()||'';
-      const field=wrap.querySelector('#mp-field').value;
-      const sym=this.chart.currentSymbol;const int=this.chart.currentInterval;
-      if(!sym){deny('No symbol loaded');return}
-      if(!sid||!key){deny('Stream ID and API Key required');return}
-      const r=this.chart.getRange();
-      const res=await this.api.manualPost({symbol:sym,interval:int,field,api_key:key,stream_id:sid,p1:r.p1,p2:r.p2});
-      if(res.error){deny(res.error);return}
+    _bindToggleGroup('[data-field]', btn => this.chart.setField(btn.dataset.field));
+    _bindToggleGroup('[data-vol]', btn => this.chart.setVolMode(btn.dataset.vol));
+    const keyIn = wrap.querySelector('#api-key-in');
+    this.api.getApiKey().then(k => { if(k) keyIn.value = k; });
+    keyIn.onchange = async () => {
+      if(keyIn.value.trim()){ 
+        await this.api.setApiKey(keyIn.value.trim());
+        toast('API key saved','success');
+      }
+    };
+    wrap.querySelector('#mp-btn').onclick = async () => {
+      const sid = wrap.querySelector('#mp-sid').value.trim();
+      const key = keyIn.value.trim() || await this.api.getApiKey() || '';
+      const field = wrap.querySelector('#mp-field').value;
+      const sym = this.chart.currentSymbol;
+      const int = this.chart.currentInterval;
+      if(!sym){deny('No symbol loaded'); return;}
+      if(!sid||!key){deny('Stream ID and API Key required'); return;}
+      const r = this.chart.getRange();
+      const res = await this.api.manualPost({symbol:sym,interval:int,field,api_key:key,stream_id:sid,p1:r.p1,p2:r.p2});
+      if(res.error){deny(res.error);return;}
       toast(`Posted ${res.sent} bars`,'success');
     };
-    if(window.userLoggedIn&&this.chart.currentSymbol) {
-      const div=document.createElement('div');div.className='sb-divider';this.el.appendChild(div);
-      const sym=this.chart.currentSymbol;const int=this.chart.currentInterval;
-      const isTracked=this._config?.tracked?.some(t=>t.symbol===sym&&t.interval===int);
-      const btn=document.createElement('button');
-      btn.className=`btn-primary btn-track-wide${isTracked?' btn-tracked':''}`;
-      btn.textContent=isTracked?'✓ Auto-updating':'Enable Auto-Update';
-      btn.onclick=async()=>{
-        if(isTracked){toast('Already tracking','info');return}
-        const r=await this.api.setTrack(sym,int,true);
-        if(r.error){deny(r.error);return}
+    if(window.userLoggedIn && this.chart.currentSymbol){
+      const sym = this.chart.currentSymbol;
+      const int = this.chart.currentInterval;
+      const isTracked = this._config?.tracked?.some(t=>t.symbol===sym && t.interval===int);
+      const btn = document.createElement('button');
+      btn.className = `btn-primary btn-track-wide${isTracked?' btn-tracked':''}`;
+      btn.textContent = isTracked?'✓ Auto-updating':'Enable Auto-Update';
+      btn.onclick = async () => {
+        if(isTracked){toast('Already tracking','info'); return;}
+        const r = await this.api.setTrack(sym,int,true);
+        if(r.error){deny(r.error); return;}
         this._config.tracked.push({symbol:sym,interval:int,auto_update_enabled:1});
-        toast('Auto-update enabled','success');this._render();
+        toast('Auto-update enabled','success'); 
+        this._render();
       };
+      this.el.appendChild(document.createElement('div')).className='sb-divider';
       this.el.appendChild(btn);
     }
   }

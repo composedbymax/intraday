@@ -9,7 +9,7 @@ document.getElementById('app').innerHTML=`
   <div class="hdr-l">
     <button class="icon-btn" id="sb-toggle" title="Menu">☰</button>
     <div id="asset-label">
-      <span id="asset-name">—</span>
+      <span id="asset-name"></span>
       <span id="asset-sym"></span>
     </div>
   </div>

@@ -75,7 +75,16 @@ function getCachedRange($pdo,$symbol,$interval) {
 function getCachedCandles($pdo,$symbol,$interval,$p1,$p2) {
   $s=$pdo->prepare("SELECT `timestamp` as time,open,high,low,close,volume FROM asset_prices WHERE symbol=? AND `interval`=? AND `timestamp` BETWEEN ? AND ? ORDER BY `timestamp`");
   $s->execute([$symbol,$interval,$p1,$p2]);
-  return $s->fetchAll();
+  $out = $s->fetchAll();
+  foreach($out as &$c){
+    $c['time']   = (int)$c['time'];
+    $c['open']   = (float)$c['open'];
+    $c['high']   = (float)$c['high'];
+    $c['low']    = (float)$c['low'];
+    $c['close']  = (float)$c['close'];
+    $c['volume'] = (int)$c['volume'];
+  }
+  return $out;
 }
 function encryptKey($plain) {
   $iv=random_bytes(16);

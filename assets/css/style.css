@@ -55,7 +55,9 @@ a:hover{text-decoration:underline}
 /* ── Search ── */
 #search-wrap{position:relative}
 #search-in{padding:6px 10px;width:clamp(140px,20vw,240px);font-size:13px;height:32px}
-#search-res{position:absolute;right:0;top:calc(100% + 4px);width:max(100%,320px);background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);max-height:320px;overflow-y:auto;z-index:100;box-shadow:0 8px 24px var(--shadow)}
+#search-res{display: block;position: absolute;right: 0;top: calc(100% + 8px);width: max(100%, 320px);background: var(--bg3);border-left: 1px solid var(--border2);border-right: 1px solid var(--border2);border-bottom: 2px solid var(--border2);border-top: none;border-radius: 0 0 var(--radius) var(--radius);max-height: 0;overflow-y: hidden;z-index: 100;box-shadow: 0 8px 24px var(--shadow);transition: max-height .22s ease, opacity .18s ease;opacity: 0;pointer-events: none;}
+#search-res.open{max-height: 320px;overflow-y: auto;opacity: 1;pointer-events: auto;}
+.search-item.kb-focus{background: var(--bg4);outline: none;}
 .search-item{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
 .search-item:last-child{border-bottom:none}
 .search-item:hover{background:var(--bg4)}
@@ -108,12 +110,14 @@ a:hover{text-decoration:underline}
 .btn-sm:hover{border-color:var(--accent);color:var(--text)}
 
 /* ── Settings panel ── */
-.settings-panel{padding:0 12px;display:flex;flex-direction:column;gap:10px}
-.setting-row{display:flex;flex-direction:column;gap:4px}
+.settings-panel{display:flex;flex-direction:column;}
+.setting-row-legend{font-size: 11px;color: var(--text3);font-weight: 600;}
+.setting-row{display:flex;flex-direction:column;gap:8px;padding:0.5rem 0rem}
+.setting-box{padding:1rem;gap:1rem}
 .setting-row label{font-size:11px;color:var(--text3);font-weight:600}
 .setting-row input{padding:5px 8px;font-size:13px;width:100%}
 .toggle-group{display:flex;gap:4px}
-.toggle-btn{flex:1;padding:5px 8px;font-size:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);transition:all .15s;text-align:center}
+.toggle-btn{margin-top:0.5rem;flex:1;padding:5px 8px;font-size:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);transition:all .15s;text-align:center}
 .toggle-btn.active{background:var(--accent);border-color:var(--accent);color:var(--white)}
 .sb-divider{height:1px;background:var(--border);margin:8px 0}
 .user-info{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px}
@@ -132,9 +136,9 @@ a:hover{text-decoration:underline}
 #toast-container{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:9999;pointer-events:none;align-items:center}
 .toast{padding:9px 18px;border-radius:var(--radius);font-size:13px;font-weight:500;animation:toast-in .2s ease;pointer-events:auto;max-width:360px;text-align:center;box-shadow:0 4px 16px var(--shadow)}
 .toast.info{background:var(--bg3);border:1px solid var(--border2);color:var(--text)}
-.toast.success{background:#14532d;border:1px solid var(--green);color:var(--green)}
-.toast.error{background:#450a0a;border:1px solid var(--red);color:var(--red)}
-.toast.warn{background:#431407;border:1px solid var(--yellow);color:var(--yellow)}
+.toast.success{background:var(--green);border:1px solid var(--bg2);color:var(--bg)}
+.toast.error{background:var(--red);border:1px solid var(--bg2);color:var(--bg)}
+.toast.warn{background:var(--yellow);border:1px solid var(--bg2);color:var(--bg)}
 @keyframes toast-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 #dialog-overlay{position:fixed;inset:0;background:var(--shadow);z-index:9000;display:flex;align-items:center;justify-content:center}
 .dialog{background:var(--bg2);border:1px solid var(--border2);border-radius:10px;padding:24px;max-width:340px;width:90%;box-shadow:0 12px 40px var(--shadow)}
@@ -155,3 +159,7 @@ a:hover{text-decoration:underline}
 .manual-post-wrap input{padding:5px 8px;font-size:12px;width:100%}
 .manual-post-wrap .row{display:flex;gap:5px}
 .manual-post-wrap .row input{flex:1}
+
+/* ── Utility ── */
+.fieldset-reset{border:none;padding:0;margin:0}
+.hidden{display:none!important}
