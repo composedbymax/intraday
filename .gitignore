@@ -16,6 +16,7 @@ Desktop.ini
 
 db.txt
 setup.sql
+destroy.sql
 app.bundled.js
 
 **/libs/*

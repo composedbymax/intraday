@@ -47,6 +47,15 @@ function yahooGet($url) {
   ]]);
   return @file_get_contents($url,false,$ctx);
 }
+function intervalSeconds($interval) {
+  $map=['1m'=>60,'2m'=>120,'5m'=>300,'15m'=>900,'30m'=>1800,'1h'=>3600,'4h'=>14400,'1d'=>86400,'1wk'=>604800,'1mo'=>2592000,'3mo'=>7776000];
+  return $map[$interval]??0;
+}
+function snapTimestamp($ts,$interval) {
+  $sec=intervalSeconds($interval);
+  if($sec<=0) return (int)$ts;
+  return (int)($ts-($ts%$sec));
+}
 function fetchYahoo($symbol,$interval,$p1,$p2) {
   $url=YAHOO_BASE."/v8/finance/chart/".urlencode($symbol)."?interval=".urlencode($interval)."&period1=$p1&period2=$p2";
   $raw=yahooGet($url);
@@ -55,18 +64,30 @@ function fetchYahoo($symbol,$interval,$p1,$p2) {
   $r=$d['chart']['result'][0]??null;
   if(!$r||empty($r['timestamp'])) return [];
   $ts=$r['timestamp'];$q=$r['indicators']['quote'][0]??[];
-  $out=[];
+  $sec=intervalSeconds($interval);
+  $currentPeriodStart=$sec>0?(int)(time()-(time()%$sec)):PHP_INT_MAX;
+  $buckets=[];
   foreach($ts as $i=>$t) {
     $o=$q['open'][$i]??null;$c=$q['close'][$i]??null;
     if($o===null||$c===null) continue;
-    $out[]=['time'=>(int)$t,'open'=>(float)$o,'high'=>(float)($q['high'][$i]??$o),
-      'low'=>(float)($q['low'][$i]??$o),'close'=>(float)$c,'volume'=>(int)($q['volume'][$i]??0)];
+    $snapped=snapTimestamp((int)$t,$interval);
+    if($sec>0&&$snapped>=$currentPeriodStart) continue;
+    $h=(float)($q['high'][$i]??$o);$l=(float)($q['low'][$i]??$o);$v=(int)($q['volume'][$i]??0);
+    if(!isset($buckets[$snapped])) {
+      $buckets[$snapped]=['time'=>$snapped,'open'=>(float)$o,'high'=>$h,'low'=>$l,'close'=>(float)$c,'volume'=>$v];
+    } else {
+      $buckets[$snapped]['high']=max($buckets[$snapped]['high'],$h);
+      $buckets[$snapped]['low']=min($buckets[$snapped]['low'],$l);
+      $buckets[$snapped]['close']=(float)$c;
+      $buckets[$snapped]['volume']+=$v;
+    }
   }
-  return $out;
+  ksort($buckets);
+  return array_values($buckets);
 }
 function storeCandles($pdo,$symbol,$interval,$candles) {
   if(!$candles) return 0;
-  $s=$pdo->prepare("INSERT IGNORE INTO asset_prices(symbol,`interval`,`timestamp`,open,high,low,close,volume)VALUES(?,?,?,?,?,?,?,?)");
+  $s=$pdo->prepare("INSERT INTO asset_prices(symbol,`interval`,`timestamp`,open,high,low,close,volume)VALUES(?,?,?,?,?,?,?,?)ON DUPLICATE KEY UPDATE open=VALUES(open),high=VALUES(high),low=VALUES(low),close=VALUES(close),volume=VALUES(volume)");
   $pdo->beginTransaction();
   foreach($candles as $c) $s->execute([$symbol,$interval,$c['time'],$c['open'],$c['high'],$c['low'],$c['close'],$c['volume']]);
   $pdo->commit();
@@ -80,14 +101,10 @@ function getCachedRange($pdo,$symbol,$interval) {
 function getCachedCandles($pdo,$symbol,$interval,$p1,$p2) {
   $s=$pdo->prepare("SELECT `timestamp` as time,open,high,low,close,volume FROM asset_prices WHERE symbol=? AND `interval`=? AND `timestamp` BETWEEN ? AND ? ORDER BY `timestamp`");
   $s->execute([$symbol,$interval,$p1,$p2]);
-  $out = $s->fetchAll();
+  $out=$s->fetchAll();
   foreach($out as &$c){
-    $c['time']   = (int)$c['time'];
-    $c['open']   = (float)$c['open'];
-    $c['high']   = (float)$c['high'];
-    $c['low']    = (float)$c['low'];
-    $c['close']  = (float)$c['close'];
-    $c['volume'] = (int)$c['volume'];
+    $c['time']=(int)$c['time'];$c['open']=(float)$c['open'];$c['high']=(float)$c['high'];
+    $c['low']=(float)$c['low'];$c['close']=(float)$c['close'];$c['volume']=(int)$c['volume'];
   }
   return $out;
 }
