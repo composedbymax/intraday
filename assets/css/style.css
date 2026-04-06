@@ -43,10 +43,11 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 #sidebar{position:absolute;left:0;top:0;bottom:0;width:var(--sb-w);background:var(--shadow);backdrop-filter: blur(30px);border-right:1px solid var(--border);transform:translateX(-100%);transition:transform .22s ease;z-index:40;display:flex;flex-direction:column;overflow:hidden}
 #sidebar.open{transform:translateX(0)}
 #sb-inner{flex:1;overflow-y:auto;overflow-x:hidden;padding:12px 0}
+.ed-mode{overflow:hidden;display:flex;flex-direction:column}
 #sb-inner::-webkit-scrollbar{width:4px}
 #sb-inner::-webkit-scrollbar-track{background:transparent}
 #sb-inner::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
-.sb-top-row{display: flex;justify-content: space-between;align-items: center;padding: 8px 12px 4px;}
+.sb-top-row{display:flex;justify-content:space-between;align-items:center;padding:8px 12px 4px;flex-shrink:0}
 .sb-menu-title{font-weight: 600;font-size: 13px;}
 .sb-label-clickable{cursor: pointer;}
 .ac-switch-row{display: flex;align-items: center;gap: 8px;font-size: 12px;color: var(--text2);}
@@ -74,8 +75,8 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 .search-item{padding:9px 12px;cursor:pointer;display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);transition:background .1s}
 .search-item:last-child{border-bottom:none}
 .search-item:hover{background:var(--bg4)}
-.si-sym{font-weight:600;font-size:13px;min-width:60px}
-.si-name{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.si-sym{font-weight:600;font-size:13px;min-width:60px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex-shrink:0;}
+.si-name{font-size:12px;color:var(--text2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1;}
 .si-type{font-size:10px;color:var(--text3);margin-left:auto;flex-shrink:0}
 
 /* ── Sidebar sections ── */
@@ -126,14 +127,14 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 /* ── Settings panel ── */
 .settings-panel{display:flex;flex-direction:column;}
 .setting-row-legend{font-size: 11px;color: var(--text3);font-weight: 600;}
-.setting-row{display:flex;flex-direction:column;gap:8px;padding:0.5rem 0rem}
-.setting-box{padding:1rem;gap:1rem}
+.setting-row{display:flex;flex-direction:column;gap:8px;padding:0.5rem 0.5rem}
+.setting-box{padding:0.5rem;gap:1rem}
 .setting-row label{font-size:11px;color:var(--text3);font-weight:600}
 .setting-row input{padding:5px 8px;font-size:13px;width:100%}
 .toggle-group{display:flex;gap:4px}
 .toggle-btn{margin-top:0.5rem;flex:1;padding:5px 8px;font-size:12px;background:var(--bg3);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text2);transition:all .15s;text-align:center}
 .toggle-btn.active{background:var(--accent);border-color:var(--accent);color:var(--white)}
-.sb-divider{height:1px;background:var(--border);margin:8px 0}
+.sb-divider{height:1px;background:var(--border);margin:8px 0;flex-shrink:0}
 .user-info{display:flex;align-items:center;gap:8px;padding:8px 12px;font-size:13px}
 .user-info .name{font-weight:500}
 .user-info .role-badge{font-size:10px;background:var(--bg4);padding:2px 6px;border-radius:3px;color:var(--text2)}
@@ -200,3 +201,33 @@ body{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;}
 #export-table th{padding:7px 12px;text-align:left;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid var(--border)}
 #export-table td{padding:6px 12px;color:var(--text);border-bottom:1px solid var(--border)}
 #export-table tbody tr:hover td{background:var(--bg3)}
+
+/* Editor*/
+.sb-top-btns{display:flex;align-items:center;gap:2px}
+.ed-container{display:flex;flex-direction:column;flex:1;overflow:hidden;min-height:0}
+.ed-toolbar{display:flex;flex-direction:column;gap:6px;padding:8px 12px;flex-shrink:0}
+.ed-snippet-row{display:flex;align-items:center;gap:6px}
+.ed-name-in{flex:1;padding:4px 8px;font-size:12px;height:28px;min-width:0}
+.ed-help-btn{font-size:13px;font-weight:700;color:var(--text3);width:28px;height:28px;border:1px solid var(--border2);border-radius:var(--radius);flex-shrink:0}
+.ed-help-btn.active{background:var(--accent);border-color:var(--accent);color:var(--white)}
+.ed-actions{display:flex;gap:4px;align-items:center}
+.ed-select{flex:1;height:28px;font-size:12px;min-width:0}
+.ed-actions .btn-sm{flex-shrink:0;padding:4px 8px}
+.ed-actions .btn-sm.danger:hover{border-color:var(--red);color:var(--red)}
+.ed-code-area{flex:1;overflow:hidden;display:flex;flex-direction:column;padding:0 12px;min-height:0}
+.ed-textarea{flex:1;width:100%;resize:none;background:var(--bg2);border:1px solid var(--border2);border-radius:var(--radius);color:var(--text);font-family:'JetBrains Mono','Fira Code','Cascadia Code',monospace;font-size:12px;line-height:1.6;padding:10px;tab-size:2;outline:none;min-height:0;overflow-y:auto;overflow-x:hidden;white-space:pre-wrap;word-break:break-all}
+.ed-textarea:focus{border-color:var(--accent)}
+.ed-run-row{display:flex;align-items:center;gap:6px;padding:8px 12px;flex-shrink:0}
+.ed-run-btn{flex:1;padding:6px 12px;font-size:12px;font-weight:600}
+.ed-help-area{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 12px 12px;min-height:0}
+.editor-help{color:var(--text2);font-size:12px;line-height:1.7}
+.editor-help h3{font-size:13px;font-weight:700;color:var(--text);margin:12px 0 6px}
+.editor-help h4{font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin:10px 0 4px}
+.editor-help p{margin-bottom:8px}
+.editor-help ul{padding-left:16px;margin-bottom:8px}
+.editor-help li{margin-bottom:4px}
+.editor-help code{background:var(--bg3);border:1px solid var(--border);border-radius:3px;padding:1px 5px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:11px;color:var(--accent)}
+.pre-wrap{position:relative;margin-bottom:8px}
+.editor-help pre{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:10px;font-family:'JetBrains Mono','Fira Code',monospace;font-size:11px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-all;overflow:hidden;margin-bottom:0}
+.pre-copy-btn{position:absolute;top:5px;right:5px;font-size:10px;padding:2px 7px;border-radius:3px;border:1px solid var(--border2);background:var(--bg3);color:var(--text3);transition:all .15s}
+.pre-copy-btn:hover{border-color:var(--accent);color:var(--accent)}
