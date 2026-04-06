@@ -9,7 +9,7 @@
   --sb-w:clamp(260px,28vw,320px);
   --hdr-h:48px;
   --radius:6px;
-  --fnt:system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+  --fnt: system-ui, sans-serif;
 }
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 html,body,#app{scrollbar-gutter:stable;scroll-behavior:smooth;height:100%;width:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:var(--fnt);font-size:14px}

@@ -13,6 +13,7 @@ export class Sidebar {
       if(tz&&tz!==this._chartTz){this._chartTz=tz;this._applyChartTz();}
     }).catch(()=>{});
     this._render();
+    this._restoreChartPrefs();
     this._exporter = new Exporter(chart);
     this._exporter.timezone = this._chartTz;
     this.chart.on('barsChanged',({count})=>this._updateBarCount(count));
@@ -32,6 +33,14 @@ export class Sidebar {
   _applyChartTz(){
     if (this._exporter) this._exporter.timezone = this._chartTz;
     if (this.onTimezoneChange) this.onTimezoneChange(this._chartTz);
+  }
+  _restoreChartPrefs() {
+    const mode  = localStorage.getItem('chart_mode');
+    const field = localStorage.getItem('chart_field');
+    const vol   = localStorage.getItem('chart_vol');
+    if (mode)  this.chart.setMode(mode);
+    if (field) this.chart.setField(field);
+    if (vol)   this.chart.setVolMode(vol);
   }
   _handleOutsideClick(e) {
     if(!this.open) return;
@@ -321,12 +330,19 @@ export class Sidebar {
       await this.api.setChartTz(this._chartTz);
       this._applyChartTz();
     };
-    _bindToggleGroup('[data-mode]', btn => {
+    _bindToggleGroup('[data-mode]',  btn => {
       this.chart.setMode(btn.dataset.mode);
+      localStorage.setItem('chart_mode', btn.dataset.mode);
       valueFieldRow.classList.toggle('hidden', btn.dataset.mode === 'candle');
     });
-    _bindToggleGroup('[data-field]', btn => this.chart.setField(btn.dataset.field));
-    _bindToggleGroup('[data-vol]', btn => this.chart.setVolMode(btn.dataset.vol));
+    _bindToggleGroup('[data-field]', btn => {
+      this.chart.setField(btn.dataset.field);
+      localStorage.setItem('chart_field', btn.dataset.field);
+    });
+    _bindToggleGroup('[data-vol]',   btn => {
+      this.chart.setVolMode(btn.dataset.vol);
+      localStorage.setItem('chart_vol', btn.dataset.vol);
+    });
     const keyIn = wrap.querySelector('#api-key-in');
     this.api.getApiKey().then(k => { if(k) keyIn.value = k; });
     keyIn.onchange = async () => {

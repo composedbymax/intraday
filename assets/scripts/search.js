@@ -22,7 +22,12 @@ export class Search {
         case 'Enter': {
           e.preventDefault();
           const focused = items[this._idx];
-          if (focused) this._select(focused.dataset.sym, focused.dataset.name);
+          if (focused) {
+            this._select(focused.dataset.sym, focused.dataset.name);
+          } else if (items.length) {
+            const top = items[0];
+            this._select(top.dataset.sym, top.dataset.name);
+          }
         }
       }
     });
@@ -64,6 +69,7 @@ export class Search {
     document.getElementById('asset-name').textContent = name || sym;
     document.getElementById('asset-sym').textContent = sym;
     this.chart.load(sym, this.chart.currentInterval);
+    toast(`${name || sym} loaded`, 'success');
     document.dispatchEvent(new CustomEvent('symbol-changed', { detail: { sym, name } }));
   }
   _hide() {
