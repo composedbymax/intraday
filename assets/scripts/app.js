@@ -1,7 +1,7 @@
 import {initMessage,toast} from './message.js';
 import {ApiClient} from './apiClient.js';
 import {Chart} from './chart.js';
-import {Search} from './search.js';
+import {Search,initUrlState} from './search.js';
 import {Sidebar} from './sidebar.js';
 import {localTimezone,offsetMinutesForZone} from './timezone.js';
 document.getElementById('app').innerHTML=`
@@ -30,6 +30,7 @@ async function main() {
   const config=await api.userConfig().catch(()=>({}));
   let chartTz='UTC';
   const chart=new Chart(document.getElementById('chart-wrap'),api,chartTz);
+  const urlLoaded=initUrlState(chart);
   const sidebar=new Sidebar(document.getElementById('sb-inner'),chart,api,config,localTimezone);
   sidebar.onTimezoneChange=tz=>{
     chartTz=tz;
@@ -44,7 +45,7 @@ async function main() {
     document.getElementById('asset-sym').textContent=int;
   });
   const first=config?.tracked?.[0];
-  if(first) chart.load(first.symbol,first.interval);
+  if(first&&!urlLoaded) chart.load(first.symbol,first.interval);
   setupPolling(config,chart,api);
 }
 function setupPolling(config,chart,api) {
