@@ -1,4 +1,5 @@
 import { toast, confirm, deny } from './message.js';
+import { createExplorePanel, createShareModal } from './editorShare.js';
 const DB_NAME='indicator-snippets';
 const DB_VER=1;
 const STORE='snippets';
@@ -54,13 +55,18 @@ async function deleteSnippet(id){
 }
 const HELP_CONTENT=`<div class="editor-help">
 <h3>Indicator API</h3>
-<p>Your script runs in a sandboxed context. Use the <code>bars</code> array and return series data to plot on the chart.</p>
+<p>Your script runs in a sandboxed context. Use the <code>bars</code> array and return series data to plot on the chart. Plotted values are exported with the chart.</p>
 <h4>Available</h4>
 <ul>
   <li><code>bars</code> — array of <code>{time, open, high, low, close, volume}</code></li>
   <li><code>plot(label, data, opts?)</code> — draw a line series. <code>data</code> is <code>[{time, value}]</code></li>
   <li><code>plotHist(label, data, opts?)</code> — draw a histogram</li>
   <li><code>plotBand(label, upper, lower, opts?)</code> — draw a band between two lines</li>
+  <li><code>plotDot(label, data, opts?)</code> — draw points / particles</li>
+  <li><code>plotArea(label, data, opts?)</code> — draw a filled area</li>
+  <li><code>plotCandle(label, candles, opts?)</code> — draw synthetic candles</li>
+  <li><code>buy(time, price?)</code> — record a long entry</li>
+  <li><code>sell(time, price?)</code> — record an exit</li>
 </ul>
 <h4>Example — SMA</h4>
 <pre>const period = 20;
@@ -74,21 +80,48 @@ plot('SMA20', sma, { color: '#f59e0b', lineWidth: 2 });</pre>
 <pre>const period = 14;
 let gains = 0, losses = 0;
 for (let i = 1; i <= period; i++) {
-  const d = bars[i].close - bars[i-1].close;
+  const d = bars[i].close - bars[i - 1].close;
   d >= 0 ? (gains += d) : (losses -= d);
 }
 let avgG = gains / period, avgL = losses / period;
 const rsi = [];
 for (let i = period + 1; i < bars.length; i++) {
-  const d = bars[i].close - bars[i-1].close;
+  const d = bars[i].close - bars[i - 1].close;
   avgG = (avgG * (period - 1) + Math.max(d, 0)) / period;
   avgL = (avgL * (period - 1) + Math.max(-d, 0)) / period;
   const rs = avgL === 0 ? 100 : avgG / avgL;
   rsi.push({ time: bars[i].time, value: 100 - 100 / (1 + rs) });
 }
 plotHist('RSI14', rsi, { color: '#3b82f6' });</pre>
+<h4>Example — Dots</h4>
+<pre>const dots = bars.map((b, i) => ({
+  time: b.time,
+  value: i ? (b.close > bars[i - 1].close ? 1 : -1) : 0
+}));
+plotDot('Signals', dots, { color: '#22c55e' });</pre>
+<h4>Example — Area</h4>
+<pre>const area = bars.map((b, i) => ({
+  time: b.time,
+  value: i ? b.close - bars[i - 1].close : 0
+}));
+plotArea('Delta', area, { color: '#a78bfa' });</pre>
+<h4>Example — Candles</h4>
+<pre>const synthetic = bars.slice(1).map((b, i) => ({
+  time: b.time,
+  open: bars[i].close,
+  high: Math.max(b.high, bars[i].close),
+  low: Math.min(b.low, bars[i].close),
+  close: b.close
+}));
+plotCandle('Synthetic', synthetic);</pre>
 <h4>plot() opts</h4>
 <pre>{ color: '#hex', lineWidth: 1|2|3, lineStyle: 0|1|2, pane: 0|1 }</pre>
+<h4>Example — Strategy</h4>
+<pre>bars.forEach((b,i)=>{
+  if(i===0) return;
+  if(b.close < bars[i - 1].close) buy(b.time);
+  if(b.close > bars[i - 1].close) sell(b.time);
+});</pre>
 </div>`;
 export class Editor{
   constructor(container,chart){
@@ -100,10 +133,15 @@ export class Editor{
     this._showHelp=false;
     this._overlays=[];
     this._rendered=false;
+    this._shareUi=null;
+    this._exploreUi=null;
   }
   setHelpVisible(v){
     this._showHelp=v;
     if(this._rendered) this._updateHelpToggle();
+  }
+  clear(){
+    this._clearOverlays(true);
   }
   _updateHelpToggle(){
     const edArea=this.el.querySelector('.ed-code-area');
@@ -126,11 +164,13 @@ export class Editor{
     const toolbar=document.createElement('div');
     toolbar.className='ed-toolbar';
     toolbar.innerHTML=`
-      <div class="ed-snippet-row">
+      <div class="ed-top-row">
         <input class="ed-name-in" id="ed-name" value="${this._snippetName}" placeholder="Snippet name">
         <button class="icon-btn ed-help-btn" id="ed-help-toggle" title="Help / Docs">?</button>
+        <button class="btn-sm ed-share-btn" id="ed-share">Share</button>
+        <button class="btn-sm ed-explore-btn" id="ed-explore">Explore</button>
       </div>
-      <div class="ed-actions">
+      <div class="ed-bottom-row">
         <select id="ed-snippets" class="ed-select"><option value="">— Load snippet —</option></select>
         <button class="btn-sm" id="ed-new">New</button>
         <button class="btn-sm" id="ed-save">Save</button>
@@ -166,9 +206,25 @@ export class Editor{
     runRow.className='ed-run-row';
     runRow.innerHTML=`<button class="btn-primary ed-run-btn" id="ed-run">▶ Run</button><button class="btn-sm" id="ed-clear">Clear</button>`;
     this.el.appendChild(runRow);
+    this._shareUi=createShareModal({getSource:()=>document.querySelector('.tv-lightweight-charts,#chart-wrap')});
+    this._exploreUi=createExplorePanel({onLoad:item=>this._loadSharedItem(item)});
+    this.el.appendChild(this._shareUi.root);
+    this.el.appendChild(this._exploreUi.root);
     this._populateSnippets();
     this._bindEvents(ta);
     this._updateHelpToggle();
+  }
+  _loadSharedItem(item){
+    this._snippetId=null;
+    this._snippetName=item.name||'Untitled';
+    this._code=item.code||'';
+    const ta=this.el.querySelector('#ed-code');
+    const name=this.el.querySelector('#ed-name');
+    const sel=this.el.querySelector('#ed-snippets');
+    if(ta) ta.value=this._code;
+    if(name) name.value=this._snippetName;
+    if(sel) sel.value='';
+    toast(item.description||item.name||'Untitled','info',6000);
   }
   async _populateSnippets(){
     const sel=this.el.querySelector('#ed-snippets');
@@ -195,10 +251,9 @@ export class Editor{
       }
     };
     this.el.querySelector('#ed-name').oninput=e=>{this._snippetName=e.target.value};
-    this.el.querySelector('#ed-help-toggle').onclick=()=>{
-      this._showHelp=!this._showHelp;
-      this._updateHelpToggle();
-    };
+    this.el.querySelector('#ed-help-toggle').onclick=()=>{this._showHelp=!this._showHelp;this._updateHelpToggle()};
+    this.el.querySelector('#ed-share').onclick=()=>{this._shareUi.open({name:this._snippetName,code:this._code})};
+    this.el.querySelector('#ed-explore').onclick=()=>{this._exploreUi.open()};
     this.el.querySelector('#ed-new').onclick=()=>{
       this._code='';this._snippetId=null;this._snippetName='Untitled';
       ta.value='';
@@ -260,12 +315,14 @@ export class Editor{
     this.el.querySelector('#ed-run').onclick=()=>this._run();
     this.el.querySelector('#ed-clear').onclick=()=>this._clearOverlays();
   }
-  _clearOverlays(){
+  _clearOverlays(silent=false){
     this._overlays.forEach(s=>{
       try{this.chart._chart.removeSeries(s)}catch(e){}
     });
     this._overlays=[];
-    toast('Overlays cleared','info');
+    this.chart.clearIndicators();
+    if(typeof this.chart.clearTrades==='function') this.chart.clearTrades();
+    if(!silent) toast('Overlays cleared','info');
   }
   _run(){
     const bars=this.chart.getCurrentData();
@@ -273,18 +330,33 @@ export class Editor{
       deny('No chart data available');
       return;
     }
-    this._clearOverlays();
+    this._clearOverlays(true);
     const plotFns=[];
+    const trades=[];
+    const findBar=time=>bars.find(b=>b.time===time)||null;
+    const normTrade=(type,time,price)=>{
+      const bar=findBar(time);
+      const px=price!=null?price:(bar?bar.close:null);
+      if(time==null||px==null) return;
+      trades.push({type,time,price:px});
+    };
     const plot=(label,data,opts={})=>plotFns.push({type:'line',label,data,opts});
     const plotHist=(label,data,opts={})=>plotFns.push({type:'hist',label,data,opts});
     const plotBand=(label,upper,lower,opts={})=>plotFns.push({type:'band',label,upper,lower,opts});
+    const plotDot=(label,data,opts={})=>plotFns.push({type:'dot',label,data,opts});
+    const plotArea=(label,data,opts={})=>plotFns.push({type:'area',label,data,opts});
+    const plotCandle=(label,data,opts={})=>plotFns.push({type:'candle',label,data,opts});
+    const buy=(time,price)=>normTrade('buy',time,price);
+    const sell=(time,price)=>normTrade('sell',time,price);
     try{
-      const fn=new Function('bars','plot','plotHist','plotBand',this._code);
-      fn(bars,plot,plotHist,plotBand);
+      const fn=new Function('bars','plot','plotHist','plotBand','plotDot','plotArea','plotCandle','buy','sell',this._code);
+      fn(bars,plot,plotHist,plotBand,plotDot,plotArea,plotCandle,buy,sell);
     }catch(err){
       deny('Error: '+err.message);
       return;
     }
+    this.chart.setIndicators(plotFns);
+    if(typeof this.chart.setTrades==='function') this.chart.setTrades(trades);
     let count=0;
     plotFns.forEach(pf=>{
       try{
@@ -310,8 +382,46 @@ export class Editor{
           const c=pf.opts.color||'#a78bfa';
           const su=this.chart._chart.addSeries(LightweightCharts.LineSeries,{color:c,lineWidth:1,title:pf.label+' U'},pf.opts.pane||0);
           const sl=this.chart._chart.addSeries(LightweightCharts.LineSeries,{color:c,lineWidth:1,title:pf.label+' L'},pf.opts.pane||0);
-          su.setData(pf.upper);sl.setData(pf.lower);
+          su.setData(pf.upper);
+          sl.setData(pf.lower);
           this._overlays.push(su,sl);
+          count++;
+        }else if(pf.type==='dot'){
+          const s=this.chart._chart.addSeries(LightweightCharts.LineSeries,{
+            color:pf.opts.color||'#f59e0b',
+            lineVisible:false,
+            pointMarkersVisible:true,
+            lastValueVisible:false,
+            priceLineVisible:false,
+            crosshairMarkerVisible:false,
+            title:pf.label
+          },pf.opts.pane!=null?pf.opts.pane:1);
+          s.setData(pf.data);
+          this._overlays.push(s);
+          count++;
+        }else if(pf.type==='area'){
+          const s=this.chart._chart.addSeries(LightweightCharts.AreaSeries,{
+            lineColor:pf.opts.color||'#a78bfa',
+            topColor:pf.opts.topColor||'rgba(167,139,250,0.35)',
+            bottomColor:pf.opts.bottomColor||'rgba(167,139,250,0.02)',
+            lineWidth:pf.opts.lineWidth||2,
+            title:pf.label
+          },pf.opts.pane||0);
+          s.setData(pf.data);
+          this._overlays.push(s);
+          count++;
+        }else if(pf.type==='candle'){
+          const s=this.chart._chart.addSeries(LightweightCharts.CandlestickSeries,{
+            upColor:pf.opts.upColor||'#22c55e',
+            downColor:pf.opts.downColor||'#ef4444',
+            borderUpColor:pf.opts.upColor||'#22c55e',
+            borderDownColor:pf.opts.downColor||'#ef4444',
+            wickUpColor:pf.opts.upColor||'#22c55e',
+            wickDownColor:pf.opts.downColor||'#ef4444',
+            title:pf.label
+          },pf.opts.pane||0);
+          s.setData(pf.data);
+          this._overlays.push(s);
           count++;
         }
       }catch(e){
@@ -319,5 +429,6 @@ export class Editor{
       }
     });
     if(count>0) toast(`Plotted ${count} series`,'success');
+    if(trades.length) toast(`Recorded ${trades.length} trades`,'success');
   }
 }
