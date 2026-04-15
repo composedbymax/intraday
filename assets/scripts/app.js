@@ -28,7 +28,7 @@ document.getElementById('app').innerHTML=`
 async function main() {
   initMessage();
   const api=new ApiClient(window.CFG.api);
-  const config=await api.userConfig().catch(()=>({}));
+  const config=await api._userConfig().catch(()=>({}));
   let chartTz='UTC';
   const chart=new Chart(document.getElementById('chart-wrap'),api,chartTz);
   const urlLoaded=initUrlState(chart);
@@ -63,7 +63,7 @@ async function poll(chart,api,freq) {
   const sym=chart._currentSymbol;const int=chart._currentInterval;
   if(sym&&int) {
     const since=chart._getLastTimestamp();
-    const res=await api.checkUpdates(sym,int,since).catch(()=>null);
+    const res=await api._checkUpdatesAPI(sym,int,since).catch(()=>null);
     if(res?.candles?.length) chart._appendCandles(res.candles);
   }
   setTimeout(()=>poll(chart,api,freq),freq);

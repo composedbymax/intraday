@@ -18,7 +18,7 @@ export class Sidebar {
       onTzChange:tz=>{this._chartTz=tz;this._applyChartTz();},
       onRerender:()=>this._renderSidebar(),
     });
-    this.api.getChartTz().then(tz=>{
+    this.api._getChartTz().then(tz=>{
       if(tz&&tz!==this._chartTz){this._chartTz=tz;this._applyChartTz();}
     }).catch(()=>{});
     this._renderSidebar();
@@ -127,7 +127,7 @@ export class Sidebar {
     if(window.userLoggedIn) this._renderSavedAssets();
   }
   _renderSettings(){
-    this._settings.render(this.el,this._chartTz);
+    this._settings._renderSettingsUI(this.el,this._chartTz);
   }
   _renderTimeframes(){
     const lbl=document.createElement('div');lbl.className='sb-label';lbl.textContent='Timeframe';
@@ -225,14 +225,14 @@ export class Sidebar {
     };
     card.querySelector('.rm-btn').onclick=async()=>{
       if(!await confirm(`Remove ${t.symbol} ${t.interval} from tracking?`)) return;
-      const r=await this.api.removeTrack(t.symbol,t.interval);
+      const r=await this.api._removeTrackAPI(t.symbol,t.interval);
       if(r.error){deny(r.error);return}
       this._config.tracked=this._config.tracked.filter(x=>!(x.symbol===t.symbol&&x.interval===t.interval));
       toast('Removed','success');this._renderSidebar();
     };
     card.querySelector('.auto-toggle').onchange=async e=>{
       const en=e.target.checked;
-      const r=await this.api.setTrack(t.symbol,t.interval,en);
+      const r=await this.api._setTrackAPI(t.symbol,t.interval,en);
       if(r.error){deny(r.error);e.target.checked=!en;return}
       t.auto_update_enabled=en?1:0;
     };
@@ -244,12 +244,12 @@ export class Sidebar {
         <label class="switch" for="${stId}"><input type="checkbox" id="${stId}" class="stream-toggle" ${stream.enabled?'checked':''}><span class="slider"></span></label>
         <button class="btn-sm danger rm-stream">×</button>`;
       sd.querySelector('.stream-toggle').onchange=async e=>{
-        const r=await this.api.toggleStream(stream.id,e.target.checked);
+        const r=await this.api._toggleStreamAPI(stream.id,e.target.checked);
         if(r.error){deny(r.error);e.target.checked=!e.target.checked}
       };
       sd.querySelector('.rm-stream').onclick=async()=>{
         if(!await confirm('Remove stream?')) return;
-        const r=await this.api.removeStream(stream.id);
+        const r=await this.api._removeStreamAPI(stream.id);
         if(r.error){deny(r.error);return}
         this._config.streams=this._config.streams.filter(s=>s.id!==stream.id);
         toast('Stream removed','success');this._renderSidebar();
@@ -294,13 +294,13 @@ export class Sidebar {
     sd.querySelector('#asf-save').onclick=async()=>{
       const sid=sd.querySelector(`#${sidId}`).value.trim();
       let key=sd.querySelector(`#${keyId}`).value.trim();
-      if(!key) key=await this.api.getApiKey()||'';
+      if(!key) key=await this.api._getKeyAPI()||'';
       const field=sd.querySelector(`#${fieldId}`).value;
       const streamTz=sd.querySelector(`#${tzId}`).value;
       if(!sid||!key){deny('Stream ID and API Key required');return}
-      const r=await this.api.addStream({symbol:t.symbol,interval:t.interval,stream_id:sid,api_key:key,field,stream_timezone:streamTz});
+      const r=await this.api._addStreamAPI({symbol:t.symbol,interval:t.interval,stream_id:sid,api_key:key,field,stream_timezone:streamTz});
       if(r.error){deny(r.error);return}
-      if(key) await this.api.setApiKey(key);
+      if(key) await this.api._setKeyAPI(key);
       this._config.streams.push({id:r.id,stream_id:sid,symbol:t.symbol,interval:t.interval,field,enabled:1,stream_timezone:streamTz});
       toast('Stream added','success');this._renderSidebar();
     };

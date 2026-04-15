@@ -8,7 +8,7 @@ export class Settings {
     this._onTzChange=onTzChange;
     this._onRerender=onRerender;
   }
-  render(container,chartTz){
+  _renderSettingsUI(container,chartTz){
     const wrap=document.createElement('div');
     wrap.className='settings-panel';
     const localOpt=this._localTz!=='UTC'
@@ -74,7 +74,7 @@ export class Settings {
       });
     };
     wrap.querySelector('#chart-tz-select').onchange=async e=>{
-      await this.api.setChartTz(e.target.value);
+      await this.api._setChartTz(e.target.value);
       this._onTzChange(e.target.value);
     };
     _bindToggleGroup('[data-mode]',btn=>{
@@ -91,23 +91,23 @@ export class Settings {
       localStorage.setItem('chart_vol',btn.dataset.vol);
     });
     const keyIn=wrap.querySelector('#api-key-in');
-    this.api.getApiKey().then(k=>{if(k) keyIn.value=k});
+    this.api._getKeyAPI().then(k=>{if(k) keyIn.value=k});
     keyIn.onchange=async()=>{
       if(keyIn.value.trim()){
-        await this.api.setApiKey(keyIn.value.trim());
+        await this.api._setKeyAPI(keyIn.value.trim());
         toast('API key saved','success');
       }
     };
     wrap.querySelector('#mp-btn').onclick=async()=>{
       const sid=wrap.querySelector('#mp-sid').value.trim();
-      const key=keyIn.value.trim()||await this.api.getApiKey()||'';
+      const key=keyIn.value.trim()||await this.api._getKeyAPI()||'';
       const field=wrap.querySelector('#mp-field').value;
       const sym=this.chart._currentSymbol;
       const int=this.chart._currentInterval;
       if(!sym){deny('No symbol loaded');return}
       if(!sid||!key){deny('Stream ID and API Key required');return}
       const r=this.chart._getRange();
-      const res=await this.api.manualPost({symbol:sym,interval:int,field,api_key:key,stream_id:sid,p1:r.p1,p2:r.p2});
+      const res=await this.api._manualPostAPI({symbol:sym,interval:int,field,api_key:key,stream_id:sid,p1:r.p1,p2:r.p2});
       if(res.error){deny(res.error);return}
       toast(`Posted ${res.sent} bars`,'success');
     };
@@ -120,7 +120,7 @@ export class Settings {
       btn.textContent=isTracked?'✓ Auto-updating':'Enable Auto-Update';
       btn.onclick=async()=>{
         if(isTracked){toast('Already tracking','info');return}
-        const r=await this.api.setTrack(sym,int,true);
+        const r=await this.api._setTrackAPI(sym,int,true);
         if(r.error){deny(r.error);return}
         this._config.tracked.push({symbol:sym,interval:int,auto_update_enabled:1});
         toast('Auto-update enabled','success');

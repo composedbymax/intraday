@@ -87,7 +87,7 @@ export class Chart {
     this._clearIndicators();
     this.sym=sym;this.int=int||this.int;
     this._tzOffsetMin=this._tzOffset(this._timezone);
-    const res=await this.api.chartData(sym,this.int,p1,p2,INITIAL_LIMIT,true);
+    const res=await this.api._chartData(sym,this.int,p1,p2,INITIAL_LIMIT,true);
     if(res.error){toast(res.error,'error');return}
     this._data=res.candles||[];
     this._p1=res.p1;this._p2=res.p2;
@@ -98,7 +98,7 @@ export class Chart {
     const step=INTERVALS_S[this.int]||86400;
     const p2=this._p1-1;
     const p1=p2-bars*step;
-    const res=await this.api.chartData(this.sym,this.int,p1,p2);
+    const res=await this.api._chartData(this.sym,this.int,p1,p2);
     if(res.error){toast(res.error,'error');return}
     if(!res.candles?.length){toast('No more data available','warn');return}
     this._data=[...res.candles,...this._data];
@@ -109,7 +109,7 @@ export class Chart {
     const step=INTERVALS_S[this.int]||86400;
     const p1=this._p2+1;
     const p2=p1+bars*step;
-    const res=await this.api.chartData(this.sym,this.int,p1,p2);
+    const res=await this.api._chartData(this.sym,this.int,p1,p2);
     if(res.error){toast(res.error,'error');return}
     if(!res.candles?.length){toast('No more data available','warn');return}
     this._data=[...this._data,...res.candles];

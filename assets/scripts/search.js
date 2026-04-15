@@ -54,7 +54,7 @@ export class Search{
     this._idx=-1;
     this.res.innerHTML='<div class="search-item" style="color:var(--text3)">Searching…</div>';
     this.res.classList.add('open');
-    const d=await this.api.search(q);
+    const d=await this.api._searchAPI(q);
     if(d.error) return this._showMessage('Search failed','var(--red)');
     const items=(d.results||[]).slice(0,10);
     if(!items.length) return this._showMessage('No results','var(--text3)');
