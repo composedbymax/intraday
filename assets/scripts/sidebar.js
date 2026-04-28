@@ -142,7 +142,7 @@ export class Sidebar {
         grid.querySelectorAll('.tf-btn').forEach(x => x.classList.remove('active'));
         b.classList.add('active');
         const sym = this.chart._currentSymbol;
-        if (sym) {this.chart.load(sym, b.dataset.int);} 
+        if (sym) {this.chart.load(sym, b.dataset.int);}
         else {this.chart.int = b.dataset.int;}
       };
     });
@@ -155,14 +155,16 @@ export class Sidebar {
     const wrap=document.createElement('div');wrap.className='data-ctrl';
     wrap.innerHTML=`
       <div class="ctrl-row">
-        <label for="bars-before">Extend before</label>
-        <input type="number" id="bars-before" value="200" min="1" max="2000">
-        <button id="btn-before">← Fetch</button>
+        <label for="bars-count">Bars</label>
+        <input type="number" id="bars-count" value="200" min="1" max="2000">
       </div>
-      <div class="ctrl-row">
-        <label for="bars-after">Extend after</label>
-        <input type="number" id="bars-after" value="200" min="1" max="2000">
-        <button id="btn-after">Fetch →</button>
+      <div class="data-action-grid">
+        <span class="data-grid-hdr">Start</span>
+        <span class="data-grid-hdr">End</span>
+        <button id="btn-extend-before">← Extend</button>
+        <button id="btn-extend-after">Extend →</button>
+        <button id="btn-trim-before">Trim →</button>
+        <button id="btn-trim-after">← Trim</button>
       </div>
       <div class="ctrl-row bar-count-row">
         <span id="sb-bar-count">Bars loaded: ${this.chart._getBarCount().toLocaleString()}</span>
@@ -181,8 +183,11 @@ export class Sidebar {
         <button class="btn-sm" id="exp-txt">TXT</button>
         <button class="btn-sm" id="exp-table">Table</button>
       </div>`;
-    wrap.querySelector('#btn-before').onclick=()=>this.chart._extendBefore(+wrap.querySelector('#bars-before').value||200);
-    wrap.querySelector('#btn-after').onclick=()=>this.chart._extendAfter(+wrap.querySelector('#bars-after').value||200);
+    const getBars=()=>+wrap.querySelector('#bars-count').value||200;
+    wrap.querySelector('#btn-extend-before').onclick=()=>this.chart._extendBefore(getBars());
+    wrap.querySelector('#btn-extend-after').onclick=()=>this.chart._extendAfter(getBars());
+    wrap.querySelector('#btn-trim-before').onclick=()=>this.chart._trimBefore(getBars());
+    wrap.querySelector('#btn-trim-after').onclick=()=>this.chart._trimAfter(getBars());
     wrap.querySelector('#exp-timefmt').onchange=e=>{this._exporter.timeFmt=e.target.value};
     wrap.querySelector('#exp-csv').onclick=()=>this._exporter._exportCSV();
     wrap.querySelector('#exp-json').onclick=()=>this._exporter._exportJSON();

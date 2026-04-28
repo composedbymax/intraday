@@ -243,6 +243,22 @@ export class Tools{
       this._scheduleDraw();
     }
   }
+  _paneRect(){
+    const r=this.chartWrap.getBoundingClientRect();
+    let pw=0,th=0;
+    const chartEl=this.chart._chart?.chartElement?.();
+    if(chartEl){
+      const table=chartEl.querySelector('table');
+      if(table){
+        const rows=Array.from(table.rows);
+        if(rows[0]){const cells=Array.from(rows[0].cells);if(cells.length>1)pw=cells[cells.length-1].getBoundingClientRect().width;}
+        if(rows.length>1)th=rows[rows.length-1].getBoundingClientRect().height;
+      }
+    }
+    if(!pw)try{const ps=this.chart._chart?.priceScale('right');if(ps?.width)pw=ps.width();}catch(_){}
+    return{x:0,y:0,w:Math.max(1,r.width-pw),h:Math.max(1,r.height-th)};
+  }
+  _inPane(x,y){const p=this._paneRect();return x>=p.x&&x<p.x+p.w&&y>=p.y&&y<p.y+p.h;}
   _scheduleDraw(){
     if(this.raf)return;
     this.raf=requestAnimationFrame(()=>{
@@ -406,6 +422,7 @@ export class Tools{
     const p=this._pickPoint(e);
     if(!p)return;
     if(e.type==='pointerdown'){
+      if(isMobile&&this.mode==='brush'&&!this._inPane(p.x,p.y))return;
       e.preventDefault();
       e.stopImmediatePropagation();
       this.down=true;
@@ -637,8 +654,14 @@ export class Tools{
     const w=this.canvas.clientWidth;
     const h=this.canvas.clientHeight;
     ctx.clearRect(0,0,w,h);
+    const pr=this._paneRect();
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(pr.x,pr.y,pr.w,pr.h);
+    ctx.clip();
     this.drawings.forEach((s,i)=>this._drawShape(ctx,s,false,this.mode==='select'&&i===this.selected));
     if(this.draft)this._drawShape(ctx,this.draft,true,false);
+    ctx.restore();
   }
   clear(){
     this.drawings=[];
