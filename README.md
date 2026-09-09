@@ -86,6 +86,7 @@ chartyfi/
         ├── app.bundled.js
         ├── app.js
         ├── appGuard.js
+        ├── appTerms.js
         ├── authPage.js
         ├── authPoll.js
         ├── autoPoll.js

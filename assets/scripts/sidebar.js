@@ -269,9 +269,9 @@ export class Sidebar {
     wrap.querySelector('#btn-trim-before').onclick=()=>this.chart._trimBefore(getBars());
     wrap.querySelector('#btn-trim-after').onclick=()=>this.chart._trimAfter(getBars());
     wrap.querySelector('#exp-timefmt').onchange=e=>{this._exporter.timeFmt=e.target.value;storage.setExpTimefmt(e.target.value)};
-    wrap.querySelector('#exp-csv').onclick=()=>this._exporter._exportCSV();
-    wrap.querySelector('#exp-json').onclick=()=>this._exporter._exportJSON();
-    wrap.querySelector('#exp-txt').onclick=()=>this._exporter._exportTXT();
+    wrap.querySelector('#exp-csv').onclick=async()=>{if(await confirm('Download CSV?'))this._exporter._exportCSV();};
+    wrap.querySelector('#exp-json').onclick=async()=>{if(await confirm('Download JSON?'))this._exporter._exportJSON();};
+    wrap.querySelector('#exp-txt').onclick=async()=>{if(await confirm('Download TXT?'))this._exporter._exportTXT();};
     wrap.querySelector('#exp-table').onclick=()=>this._exporter._showTable();
     wrap.appendChild(this._importer.buildEl());
     this.el.appendChild(wrap);
